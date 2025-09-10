@@ -6,13 +6,11 @@ import {
   TouchableOpacity,
   Animated,
   Alert,
-  Platform // 1. Import Platform
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Navigation } from 'lucide-react-native';
-// 2. Conditionally import expo-sensors only if not on web
-const Sensors = Platform.OS !== 'web' ? require('expo-sensors') : undefined;
 import { Card } from '@/components/ui/Card';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,7 +26,8 @@ export default function CompassScreen() {
   const { t } = useLanguage();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  // 3. Handle the web case
+  const optimalDirection = optimalAzimuth ? parseFloat(optimalAzimuth) : 180;
+
   if (Platform.OS === 'web') {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -43,9 +42,6 @@ export default function CompassScreen() {
       </SafeAreaView>
     );
   }
-
-  // The rest of your existing component code for iOS and Android goes here...
-  const optimalDirection = optimalAzimuth ? parseFloat(optimalAzimuth) : 180;
 
   useEffect(() => {
     startCompass();
@@ -64,7 +60,7 @@ export default function CompassScreen() {
 
   const startCompass = async () => {
     try {
-      // The 'Sensors' constant will be defined here because we are not on web
+      const Sensors = require('expo-sensors');
       const { status } = await Sensors.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission needed', 'Access to sensors is required');
@@ -84,12 +80,6 @@ export default function CompassScreen() {
     }
   };
   
-  // ... (the rest of your functions: stopCompass, getDifferenceAngle, etc.)
-  // ... (your styles object)
-  // ... (your return statement with the JSX for the compass)
-
-  // NOTE: Make sure to include all the remaining functions and the return statement
-  // from your original code file below this point. I've omitted them here for brevity.
   const stopCompass = () => {
     if (subscription) {
       subscription.remove();

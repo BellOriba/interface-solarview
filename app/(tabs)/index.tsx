@@ -6,12 +6,12 @@ import {
   ScrollView, 
   Alert,
   TouchableOpacity,
-  Modal 
+  Modal,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { MapPin, Navigation, ChevronDown } from 'lucide-react-native';
-import * as Location from 'expo-location';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -56,6 +56,13 @@ export default function CalculateScreen() {
   const getCurrentLocation = async () => {
     try {
       setIsLoading(true);
+      
+      if (Platform.OS === 'web') {
+        Alert.alert(t('error'), 'GPS functionality is not available on web. Please enter coordinates manually.');
+        return;
+      }
+
+      const Location = require('expo-location');
       const { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status !== 'granted') {
@@ -245,14 +252,19 @@ export default function CalculateScreen() {
             <TouchableOpacity 
               style={styles.locationButton}
               onPress={getCurrentLocation}
+              disabled={Platform.OS === 'web'}
             >
               <Navigation size={20} color={colors.primary} />
-              <Text style={styles.locationButtonText}>GPS</Text>
+              <Text style={[styles.locationButtonText, Platform.OS === 'web' && { opacity: 0.5 }]}>
+                GPS {Platform.OS === 'web' ? '(Mobile only)' : ''}
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.locationButton}>
               <MapPin size={20} color={colors.primary} />
-              <Text style={styles.locationButtonText}>Mapa</Text>
+              <Text style={styles.locationButtonText}>
+                Mapa {Platform.OS === 'web' ? '(Coming soon)' : ''}
+              </Text>
             </TouchableOpacity>
           </View>
 
