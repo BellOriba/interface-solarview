@@ -6,7 +6,8 @@ import {
   StyleSheet, 
   ViewStyle, 
   TextStyle,
-  TouchableOpacity 
+  TouchableOpacity,
+  Platform 
 } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Typography } from '@/constants/colors';
@@ -46,6 +47,7 @@ export function Input({
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const styles = StyleSheet.create({
     container: {
@@ -86,9 +88,16 @@ export function Input({
   return (
     <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputContainer}>
+      <View style={[
+        styles.inputContainer,
+        isFocused && { borderColor: colors.primary, borderWidth: 2 }
+      ]}>
         <TextInput
-          style={[styles.input, inputStyle]}
+          style={[
+            styles.input,
+            inputStyle,
+            Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null
+          ]}
           placeholder={placeholder}
           placeholderTextColor={colors.textSecondary}
           value={value}
@@ -99,6 +108,8 @@ export function Input({
           editable={!disabled}
           multiline={multiline}
           numberOfLines={numberOfLines}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         />
         {secureTextEntry && (
           <TouchableOpacity

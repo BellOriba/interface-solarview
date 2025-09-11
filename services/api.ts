@@ -39,51 +39,109 @@ class ApiService {
       return this.adminApiKey;
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}/auth/login?email=${encodeURIComponent(ADMIN_EMAIL)}&password=${encodeURIComponent(ADMIN_PASSWORD)}`,
-      {
-        method: 'POST',
-        headers: await this.getHeaders(),
-      }
-    );
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+      throw new Error('Admin credentials are not configured. Please set EXPO_PUBLIC_ADMIN_EMAIL and EXPO_PUBLIC_ADMIN_PASSWORD environment variables.');
+    }
 
-    const data = await this.handleResponse<User>(response);
-    this.adminApiKey = data.api_key!;
-    return this.adminApiKey;
+    try {
+      const params = new URLSearchParams();
+      params.append('email', ADMIN_EMAIL);
+      params.append('password', ADMIN_PASSWORD);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/auth/login?${params.toString()}`,
+        {
+          method: 'POST',
+          headers: await this.getHeaders()
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Admin login failed: ${error}`);
+      }
+
+      const data: { api_key: string } = await response.json();
+      
+      if (!data.api_key) {
+        throw new Error('No API key received in the response');
+      }
+      
+      this.adminApiKey = data.api_key;
+      return this.adminApiKey;
+    } catch (error) {
+      console.error('Error getting admin API key:', error);
+      throw new Error(`Failed to get admin API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async login(email: string, password: string): Promise<User> {
-    const response = await fetch(
-      `${API_BASE_URL}/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-      {
-        method: 'POST',
-        headers: await this.getHeaders(),
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+
+    try {
+      const params = new URLSearchParams();
+      params.append('email', email);
+      params.append('password', password);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/auth/login?${params.toString()}`,
+        {
+          method: 'POST',
+          headers: await this.getHeaders()
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Login failed');
       }
-    );
 
-    const user = await this.handleResponse<User>(response);
-    
-    // Store user data and API key
-    await AsyncStorage.setItem('user', JSON.stringify(user));
-    await AsyncStorage.setItem('apiKey', user.api_key!);
+      const user = await response.json();
+      
+      if (!user.api_key) {
+        throw new Error('No API key received in the response');
+      }
+      
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+      await AsyncStorage.setItem('apiKey', user.api_key);
 
-    return user;
+      return user;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async register(email: string, password: string): Promise<User> {
-    const adminApiKey = await this.getAdminApiKey();
-    
-    const response = await fetch(`${API_BASE_URL}/users/`, {
-      method: 'POST',
-      headers: await this.getHeaders(adminApiKey),
-      body: JSON.stringify({
-        email,
-        password,
-        is_admin: false,
-      }),
-    });
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
 
-    return this.handleResponse<User>(response);
+    try {
+      const adminApiKey = await this.getAdminApiKey();
+      
+      const response = await fetch(`${API_BASE_URL}/users/`, {
+        method: 'POST',
+        headers: await this.getHeaders(adminApiKey),
+        body: JSON.stringify({
+          email,
+          password,
+          is_admin: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Registration failed');
+      }
+
+      return this.login(email, password);
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw new Error(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async getCurrentUser(apiKey: string): Promise<User> {
@@ -103,7 +161,6 @@ class ApiService {
 
     const data = await this.handleResponse<{ api_key: string }>(response);
     
-    // Update stored API key
     await AsyncStorage.setItem('apiKey', data.api_key);
     
     return data.api_key;

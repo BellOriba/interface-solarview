@@ -15,7 +15,7 @@ export const translations = {
     forgotPassword: 'Esqueceu a senha?',
     dontHaveAccount: 'Não tem uma conta?',
     alreadyHaveAccount: 'Já tem uma conta?',
-    logout: 'Sair',
+    logout: 'Desconectar',
     
     // Calculate
     latitude: 'Latitude',
@@ -35,6 +35,7 @@ export const translations = {
     manufacturer: 'Fabricante',
     capacity: 'Capacidade (kWp)',
     efficiency: 'Eficiência (%)',
+    minEfficiency: 'Eficiência Mínima (%)',
     type: 'Tipo',
     delete: 'Excluir',
     save: 'Salvar',
@@ -48,6 +49,10 @@ export const translations = {
     lightMode: 'Modo Claro',
     portuguese: 'Português',
     english: 'Inglês',
+    preferences: 'Preferências',
+    confirmLogout: 'Tem certeza que deseja sair?',
+    administrator: 'Administrador',
+    userRole: 'Usuário',
     
     // Results
     monthlyProduction: 'Produção Mensal',
@@ -56,6 +61,12 @@ export const translations = {
     optimalAzimuth: 'Azimute Ótimo',
     coordinates: 'Coordenadas',
     openCompass: 'Abrir Bússola',
+    compassWebUnavailable: 'A bússola não está disponível na web. 🧭',
+    solarCompass: 'Bússola Solar',
+    optimal: 'Ótimo',
+    aligned: '✓ Alinhado!',
+    keepTurning: '↻ Continue girando',
+    difference: 'Diferença',
     
     // Common
     loading: 'Carregando...',
@@ -64,6 +75,9 @@ export const translations = {
     ok: 'OK',
     yes: 'Sim',
     no: 'Não',
+    permissionNeeded: 'Permissão necessária',
+    sensorsAccessRequired: 'Acesso aos sensores é necessário',
+    compassAccessError: 'Não foi possível acessar a bússola',
     
     // Validation
     emailRequired: 'E-mail é obrigatório',
@@ -72,6 +86,26 @@ export const translations = {
     passwordMinLength: 'Senha deve ter no mínimo 8 caracteres',
     passwordRequirements: 'Senha deve conter pelo menos uma letra minúscula e uma maiúscula',
     passwordsDontMatch: 'Senhas não coincidem',
+    // Calculate (extra)
+    gpsUnavailableWeb: 'GPS não está disponível na Web. Por favor, informe as coordenadas manualmente.',
+    permissionLocationDenied: 'Permissão de acesso à localização negada',
+    errorGettingLocation: 'Erro ao obter a localização',
+    fillAllFields: 'Preencha todos os campos',
+    invalidLatitude: 'Latitude inválida',
+    invalidLongitude: 'Longitude inválida',
+    peakPowerNonNegative: 'Potência de Pico deve ser não negativa',
+    systemLossNonNegative: 'Perda do Sistema deve ser não negativa',
+    panelConfig: 'Configuração do Painel',
+    selectModel: 'Selecionar Modelo',
+    gps: 'GPS',
+    mobileOnly: 'Somente no mobile',
+    map: 'Mapa',
+    comingSoon: 'Em breve',
+
+    // Not Found
+    oops: 'Ops!',
+    screenNotFound: 'Esta tela não existe.',
+    goHome: 'Ir para a tela inicial!'
   },
   en: {
     // Navigation
@@ -109,6 +143,7 @@ export const translations = {
     manufacturer: 'Manufacturer',
     capacity: 'Capacity (kWp)',
     efficiency: 'Efficiency (%)',
+    minEfficiency: 'Minimum Efficiency (%)',
     type: 'Type',
     delete: 'Delete',
     save: 'Save',
@@ -122,6 +157,10 @@ export const translations = {
     lightMode: 'Light Mode',
     portuguese: 'Portuguese',
     english: 'English',
+    preferences: 'Preferences',
+    confirmLogout: 'Are you sure you want to log out?',
+    administrator: 'Administrator',
+    userRole: 'User',
     
     // Results
     monthlyProduction: 'Monthly Production',
@@ -130,6 +169,12 @@ export const translations = {
     optimalAzimuth: 'Optimal Azimuth',
     coordinates: 'Coordinates',
     openCompass: 'Open Compass',
+    compassWebUnavailable: 'Compass is not available on the web. 🧭',
+    solarCompass: 'Solar Compass',
+    optimal: 'Optimal',
+    aligned: '✓ Aligned!',
+    keepTurning: '↻ Keep turning',
+    difference: 'Difference',
     
     // Common
     loading: 'Loading...',
@@ -138,6 +183,9 @@ export const translations = {
     ok: 'OK',
     yes: 'Yes',
     no: 'No',
+    permissionNeeded: 'Permission needed',
+    sensorsAccessRequired: 'Access to sensors is required',
+    compassAccessError: 'Could not access the compass',
     
     // Validation
     emailRequired: 'Email is required',
@@ -146,5 +194,27 @@ export const translations = {
     passwordMinLength: 'Password must be at least 8 characters',
     passwordRequirements: 'Password must contain at least one lowercase and one uppercase letter',
     passwordsDontMatch: "Passwords don't match",
+    // Calculate (extra)
+    gpsUnavailableWeb: 'GPS functionality is not available on web. Please enter coordinates manually.',
+    permissionLocationDenied: 'Permission to access location was denied',
+    errorGettingLocation: 'Error getting location',
+    fillAllFields: 'Please fill all fields',
+    invalidLatitude: 'Invalid latitude',
+    invalidLongitude: 'Invalid longitude',
+    peakPowerNonNegative: 'Peak power must be non-negative',
+    systemLossNonNegative: 'System loss must be non-negative',
+    panelConfig: 'Panel Configuration',
+    selectModel: 'Select Model',
+    gps: 'GPS',
+    mobileOnly: 'Mobile only',
+    map: 'Map',
+    comingSoon: 'Coming soon',
+    // Compass
+    compassInfo: 'Compass Information',
+    compassDescription: 'The compass is a tool that helps find the right direction.',
+    // Not Found
+    oops: 'Oops!',
+    screenNotFound: "This screen doesn't exist.",
+    goHome: 'Go to home screen!'
   },
 };

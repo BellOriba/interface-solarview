@@ -60,12 +60,21 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      await apiService.register(email, password);
-      Alert.alert(t('success'), 'Conta criada com sucesso!', [
-        { text: t('ok'), onPress: () => router.replace('/(auth)/login') }
-      ]);
+      const user = await apiService.register(email, password);
+      
+      try {
+        await apiService.login(email, password);
+        router.replace('/(tabs)');
+      } catch (loginError) {
+        Alert.alert(
+          t('success'), 
+          'Conta criada com sucesso! Por favor, faça login para continuar.',
+          [{ text: t('ok'), onPress: () => router.replace('/(auth)/login') }]
+        );
+      }
     } catch (error) {
-      Alert.alert(t('error'), 'Erro ao criar conta');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao criar conta';
+      Alert.alert(t('error'), errorMessage);
     } finally {
       setIsLoading(false);
     }

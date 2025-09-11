@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Globe, Moon, Sun, LogOut } from 'lucide-react-native';
 import { Card } from '@/components/ui/Card';
@@ -7,20 +7,41 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Colors, Spacing, Typography } from '@/constants/colors';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { t, language, setLanguage } = useLanguage();
   const colors = isDark ? Colors.dark : Colors.light;
+  const router = useRouter();
 
   const handleLogout = () => {
+    // On web, Alert doesn't support actionable buttons; use window.confirm instead
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' && window.confirm(t('confirmLogout'));
+      if (confirmed) {
+        (async () => {
+          await logout();
+          router.replace('/(auth)/login');
+        })();
+      }
+      return;
+    }
+
     Alert.alert(
       t('logout'),
-      'Tem certeza que deseja sair?',
+      t('confirmLogout'),
       [
         { text: t('cancel'), style: 'cancel' },
-        { text: t('logout'), style: 'destructive', onPress: logout },
+        { 
+          text: t('logout'), 
+          style: 'destructive', 
+          onPress: async () => {
+            await logout();
+            router.replace('/(auth)/login');
+          }
+        },
       ]
     );
   };
@@ -46,7 +67,10 @@ export default function SettingsScreen() {
     },
     content: {
       flex: 1,
+    },
+    contentContainer: {
       padding: Spacing.lg,
+      paddingBottom: Spacing.xl * 2,
     },
     section: {
       marginBottom: Spacing.lg,
@@ -102,7 +126,7 @@ export default function SettingsScreen() {
         <Text style={styles.title}>{t('settings')}</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('profile')}</Text>
           <Card>
@@ -110,14 +134,14 @@ export default function SettingsScreen() {
               <User size={48} color={colors.primary} />
               <Text style={styles.userEmail}>{user?.email}</Text>
               <Text style={styles.userRole}>
-                {user?.is_admin ? 'Administrador' : 'Usuário'}
+                {user?.is_admin ? t('administrator') : t('userRole')}
               </Text>
             </View>
           </Card>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferências</Text>
+          <Text style={styles.sectionTitle}>{t('preferences')}</Text>
           <Card>
             <TouchableOpacity style={styles.settingItem} onPress={toggleLanguage}>
               <View style={styles.settingInfo}>
@@ -157,7 +181,7 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </Card>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

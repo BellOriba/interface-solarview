@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Compass } from 'lucide-react-native';
@@ -8,12 +8,11 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { CalculationResult } from '@/types';
+import { CalculationResult, MonthlyEntry } from '@/types';
 import { Colors, Spacing, Typography } from '@/constants/colors';
 
-const screenWidth = Dimensions.get('window').width;
-
 export default function ResultsScreen() {
+  const { width } = useWindowDimensions();
   const { resultData, coordinates } = useLocalSearchParams<{
     resultData: string;
     coordinates: string;
@@ -30,6 +29,11 @@ export default function ResultsScreen() {
   const result: CalculationResult = JSON.parse(resultData);
   const coords = JSON.parse(coordinates);
 
+  const monthlyFixed = (result.outputs?.monthly?.fixed ?? []) as MonthlyEntry[];
+  const monthlySorted = monthlyFixed
+    .filter((m) => m && typeof m.E_m === 'number')
+    .sort((a, b) => (a?.month ?? 0) - (b?.month ?? 0));
+
   const chartData = {
     labels: [
       'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
@@ -37,7 +41,7 @@ export default function ResultsScreen() {
     ],
     datasets: [
       {
-        data: result.outputs.monthly.map(m => m.E_m),
+        data: monthlySorted.map(m => m.E_m),
         color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
         strokeWidth: 3,
       },
@@ -65,7 +69,7 @@ export default function ResultsScreen() {
     router.push({
       pathname: '/compass',
       params: { 
-        optimalAzimuth: result.meta.optimal_azimuth.toString(),
+        optimalAzimuth: result.mounting_system.fixed.azimuth.value.toString(),
       },
     });
   };
@@ -169,28 +173,28 @@ export default function ResultsScreen() {
           <View style={styles.statsGrid}>
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
-                {result.outputs.totals.E_y.toFixed(0)}
+                {result.outputs.totals.fixed.E_y.toFixed(0)}
               </Text>
               <Text style={styles.statLabel}>kWh/ano</Text>
             </Card>
             
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
-                {(result.outputs.totals.E_y / 12).toFixed(0)}
+                {(result.outputs.totals.fixed.E_y / 12).toFixed(0)}
               </Text>
               <Text style={styles.statLabel}>kWh/mês (média)</Text>
             </Card>
             
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
-                {result.meta.optimal_inclination.toFixed(0)}°
+                {result.mounting_system.fixed.slope.value.toFixed(0)}°
               </Text>
               <Text style={styles.statLabel}>Inclinação Ótima</Text>
             </Card>
             
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
-                {result.meta.optimal_azimuth.toFixed(0)}°
+                {result.mounting_system.fixed.azimuth.value.toFixed(0)}°
               </Text>
               <Text style={styles.statLabel}>Azimute Ótimo</Text>
             </Card>
@@ -203,7 +207,7 @@ export default function ResultsScreen() {
             <View style={styles.chartContainer}>
               <LineChart
                 data={chartData}
-                width={screenWidth - 64}
+                width={Math.max(320, Math.min(width - 64, 1200))}
                 height={220}
                 chartConfig={chartConfig}
                 bezier
@@ -219,7 +223,7 @@ export default function ResultsScreen() {
             <View style={styles.compassSection}>
               <View style={styles.compassInfo}>
                 <Text style={styles.compassValue}>
-                  {result.meta.optimal_azimuth.toFixed(0)}° Sul
+                  {result.mounting_system.fixed.azimuth.value.toFixed(0)}° Sul
                 </Text>
                 <Text style={styles.compassLabel}>
                   Direção recomendada para os painéis

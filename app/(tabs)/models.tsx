@@ -6,10 +6,12 @@ import {
   FlatList, 
   TouchableOpacity,
   Modal,
-  Alert
+  Alert,
+  ScrollView,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, CreditCard as Edit, Trash2, Filter } from 'lucide-react-native';
+import { Plus, CreditCard as Edit, Trash2, Filter, X } from 'lucide-react-native';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -38,6 +40,7 @@ export default function ModelsScreen() {
   const [manufacturerFilter, setManufacturerFilter] = useState('');
   const [minCapacityFilter, setMinCapacityFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [minEfficiencyFilter, setMinEfficiencyFilter] = useState('');
 
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -57,6 +60,7 @@ export default function ModelsScreen() {
       if (manufacturerFilter) filters.manufacturer = manufacturerFilter;
       if (minCapacityFilter) filters.min_capacity = parseFloat(minCapacityFilter);
       if (typeFilter) filters.panel_type = typeFilter;
+      if (minEfficiencyFilter) filters.min_efficiency = parseFloat(minEfficiencyFilter);
 
       const data = await apiService.getPanelModels(user.api_key, filters);
       setModels(data);
@@ -203,6 +207,9 @@ export default function ModelsScreen() {
     content: {
       flex: 1,
       padding: Spacing.lg,
+      width: '100%',
+      maxWidth: 1100,
+      alignSelf: 'center',
     },
     modelCard: {
       marginBottom: Spacing.md,
@@ -247,12 +254,25 @@ export default function ModelsScreen() {
       borderRadius: BorderRadius.lg,
       padding: Spacing.lg,
       maxHeight: '90%',
+      overflow: 'hidden',
+      width: '100%',
+      maxWidth: 720,
+      alignSelf: 'center',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: Spacing.md,
     },
     modalTitle: {
       ...Typography.h2,
       color: colors.text,
       textAlign: 'center',
-      marginBottom: Spacing.lg,
+      flex: 1,
+    },
+    closeButton: {
+      marginLeft: Spacing.md,
     },
     modalActions: {
       flexDirection: 'row',
@@ -294,60 +314,71 @@ export default function ModelsScreen() {
         animationType="slide"
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {editingModel ? t('editModel') : t('addModel')}
-            </Text>
-            
-            <Input
-              label={t('modelName')}
-              value={name}
-              onChangeText={setName}
-            />
-            
-            <Input
-              label={t('manufacturer')}
-              value={manufacturer}
-              onChangeText={setManufacturer}
-            />
-            
-            <Input
-              label={t('capacity')}
-              value={capacity}
-              onChangeText={setCapacity}
-              keyboardType="numeric"
-            />
-            
-            <Input
-              label={t('efficiency')}
-              value={efficiency}
-              onChangeText={setEfficiency}
-              keyboardType="numeric"
-            />
-            
-            <Input
-              label={t('type')}
-              value={type}
-              onChangeText={setType}
-            />
+        <TouchableWithoutFeedback onPress={() => setShowModal(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {editingModel ? t('editModel') : t('addModel')}
+                  </Text>
+                  <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
+                    <X size={22} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.modalActions}>
-              <Button
-                title={t('cancel')}
-                onPress={() => setShowModal(false)}
-                variant="outline"
-                style={styles.actionButton}
-              />
-              <Button
-                title={t('save')}
-                onPress={handleSave}
-                loading={isLoading}
-                style={styles.actionButton}
-              />
-            </View>
+                <ScrollView>
+                  <Input
+                    label={t('modelName')}
+                    value={name}
+                    onChangeText={setName}
+                  />
+                  
+                  <Input
+                    label={t('manufacturer')}
+                    value={manufacturer}
+                    onChangeText={setManufacturer}
+                  />
+                  
+                  <Input
+                    label={t('capacity')}
+                    value={capacity}
+                    onChangeText={setCapacity}
+                    keyboardType="numeric"
+                  />
+                  
+                  <Input
+                    label={t('efficiency')}
+                    value={efficiency}
+                    onChangeText={setEfficiency}
+                    keyboardType="numeric"
+                  />
+                  
+                  <Input
+                    label={t('type')}
+                    value={type}
+                    onChangeText={setType}
+                  />
+
+                  <View style={styles.modalActions}>
+                    <Button
+                      title={t('cancel')}
+                      onPress={() => setShowModal(false)}
+                      variant="outline"
+                      style={styles.actionButton}
+                    />
+                    <Button
+                      title={t('save')}
+                      onPress={handleSave}
+                      loading={isLoading}
+                      style={styles.actionButton}
+                    />
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Filters Modal */}
@@ -357,51 +388,70 @@ export default function ModelsScreen() {
         animationType="slide"
         onRequestClose={() => setShowFilters(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filtros</Text>
-            
-            <Input
-              label={t('manufacturer')}
-              value={manufacturerFilter}
-              onChangeText={setManufacturerFilter}
-            />
-            
-            <Input
-              label="Capacidade Mínima (kWp)"
-              value={minCapacityFilter}
-              onChangeText={setMinCapacityFilter}
-              keyboardType="numeric"
-            />
-            
-            <Input
-              label={t('type')}
-              value={typeFilter}
-              onChangeText={setTypeFilter}
-            />
+        <TouchableWithoutFeedback onPress={() => setShowFilters(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Filtros</Text>
+                  <TouchableOpacity style={styles.closeButton} onPress={() => setShowFilters(false)}>
+                    <X size={22} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.modalActions}>
-              <Button
-                title="Limpar"
-                onPress={() => {
-                  setManufacturerFilter('');
-                  setMinCapacityFilter('');
-                  setTypeFilter('');
-                }}
-                variant="outline"
-                style={styles.actionButton}
-              />
-              <Button
-                title="Aplicar"
-                onPress={() => {
-                  setShowFilters(false);
-                  loadModels();
-                }}
-                style={styles.actionButton}
-              />
-            </View>
+                <ScrollView>
+                  <Input
+                    label={t('manufacturer')}
+                    value={manufacturerFilter}
+                    onChangeText={setManufacturerFilter}
+                  />
+                  
+                  <Input
+                    label="Capacidade Mínima (kWp)"
+                    value={minCapacityFilter}
+                    onChangeText={setMinCapacityFilter}
+                    keyboardType="numeric"
+                  />
+                  
+                  <Input
+                    label={t('minEfficiency')}
+                    value={minEfficiencyFilter}
+                    onChangeText={setMinEfficiencyFilter}
+                    keyboardType="numeric"
+                  />
+                  
+                  <Input
+                    label={t('type')}
+                    value={typeFilter}
+                    onChangeText={setTypeFilter}
+                  />
+
+                  <View style={styles.modalActions}>
+                    <Button
+                      title="Limpar"
+                      onPress={() => {
+                        setManufacturerFilter('');
+                        setMinCapacityFilter('');
+                        setMinEfficiencyFilter('');
+                        setTypeFilter('');
+                      }}
+                      variant="outline"
+                      style={styles.actionButton}
+                    />
+                    <Button
+                      title="Aplicar"
+                      onPress={() => {
+                        setShowFilters(false);
+                        loadModels();
+                      }}
+                      style={styles.actionButton}
+                    />
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );

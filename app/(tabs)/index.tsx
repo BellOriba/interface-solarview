@@ -7,11 +7,15 @@ import {
   Alert,
   TouchableOpacity,
   Modal,
-  Platform
+  Platform,
+  useWindowDimensions,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { MapPin, Navigation, ChevronDown } from 'lucide-react-native';
+import { MapPin, Navigation, ChevronDown, LocateFixed, Map } from 'lucide-react-native';
+import { MapModal } from '@/components/MapModal';
+import * as Location from 'expo-location';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -23,24 +27,124 @@ import { PanelModel } from '@/types';
 import { Colors, Spacing, Typography, BorderRadius } from '@/constants/colors';
 
 export default function CalculateScreen() {
+  const { width } = useWindowDimensions();
+  
+  // Form state
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [peakPower, setPeakPower] = useState('');
   const [systemLoss, setSystemLoss] = useState('14');
+  
+  // Error states
+  const [latitudeError, setLatitudeError] = useState<string | undefined>();
+  const [longitudeError, setLongitudeError] = useState<string | undefined>();
+  const [peakPowerError, setPeakPowerError] = useState<string | undefined>();
+  const [systemLossError, setSystemLossError] = useState<string | undefined>();
+  
+  // Loading states
   const [isLoading, setIsLoading] = useState(false);
-  const [useManualInput, setUseManualInput] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  
+  // Location state
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  
+  // Panel models state
   const [panelModels, setPanelModels] = useState<PanelModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<PanelModel | null>(null);
   const [showModelPicker, setShowModelPicker] = useState(false);
 
+  // Context hooks
   const { user } = useAuth();
   const { isDark } = useTheme();
   const { t } = useLanguage();
+  
+  // Theme colors
   const colors = isDark ? Colors.dark : Colors.light;
+  
+  // Translation helper
+  const translate = (key: string) => t ? t(key) : key;
 
   useEffect(() => {
     loadPanelModels();
   }, []);
+
+  const getCurrentLocation = async () => {
+    setIsLocating(true);
+    setLocationError(null);
+    
+    try {
+      if (Platform.OS === 'web') {
+        // Web geolocation API
+        if (!navigator.geolocation) {
+          setLocationError('Geolocalização não suportada no seu navegador');
+          return;
+        }
+
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve, 
+            (error) => {
+              let message = 'Erro ao obter localização';
+              switch(error.code) {
+                case error.PERMISSION_DENIED:
+                  message = 'Permissão de localização negada';
+                  break;
+                case error.POSITION_UNAVAILABLE:
+                  message = 'Informações de localização indisponíveis';
+                  break;
+                case error.TIMEOUT:
+                  message = 'Tempo de espera da localização expirado';
+                  break;
+              }
+              reject(new Error(message));
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 0
+            }
+          );
+        });
+
+        setLatitude(position.coords.latitude.toFixed(6));
+        setLongitude(position.coords.longitude.toFixed(6));
+      } else {
+        // Mobile (Expo Location)
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationError('Permissão para acessar a localização foi negada');
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          timeInterval: 0,
+          distanceInterval: 0
+        });
+
+        setLatitude(location.coords.latitude.toFixed(6));
+        setLongitude(location.coords.longitude.toFixed(6));
+      }
+      
+      // Clear any previous errors
+      setLatitudeError(undefined);
+      setLongitudeError(undefined);
+      setLocationError(null);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setLocationError(`Não foi possível obter a localização: ${errorMessage}`);
+      
+      // Show alert for better user feedback
+      Alert.alert(
+        'Erro de Localização', 
+        `Não foi possível obter sua localização: ${errorMessage}. Por favor, insira as coordenadas manualmente.`
+      );
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   const loadPanelModels = async () => {
     try {
@@ -53,63 +157,74 @@ export default function CalculateScreen() {
     }
   };
 
-  const getCurrentLocation = async () => {
-    try {
-      setIsLoading(true);
-      
-      if (Platform.OS === 'web') {
-        Alert.alert(t('error'), 'GPS functionality is not available on web. Please enter coordinates manually.');
-        return;
-      }
-
-      const Location = require('expo-location');
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert(t('error'), 'Permission to access location was denied');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      setLatitude(location.coords.latitude.toString());
-      setLongitude(location.coords.longitude.toString());
-    } catch (error) {
-      Alert.alert(t('error'), 'Error getting location');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleModelSelect = (model: PanelModel) => {
     setSelectedModel(model);
     setPeakPower(model.capacity.toString());
-    setSystemLoss('14'); // Default system loss
+    setSystemLoss(model.efficiency.toString());
     setShowModelPicker(false);
   };
 
+  const handleMapSelect = (coords: { latitude: number; longitude: number }) => {
+    setLatitude(coords.latitude.toFixed(6));
+    setLongitude(coords.longitude.toFixed(6));
+    setLatitudeError(undefined);
+    setLongitudeError(undefined);
+  };
+
   const validateForm = () => {
+    // Reset all errors
+    setLatitudeError(undefined);
+    setLongitudeError(undefined);
+    setPeakPowerError(undefined);
+    setSystemLossError(undefined);
+
+    // Check for empty fields
     if (!latitude || !longitude || !peakPower || !systemLoss) {
-      Alert.alert(t('error'), 'Please fill all fields');
+      Alert.alert(translate('error'), translate('fillAllFields'));
       return false;
     }
 
+    // Parse input values
     const lat = parseFloat(latitude);
     const lon = parseFloat(longitude);
-    
+    const peak = parseFloat(peakPower);
+    const loss = parseFloat(systemLoss);
+
+    let isValid = true;
+
+    // Validate latitude
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      Alert.alert(t('error'), 'Invalid latitude');
-      return false;
-    }
-    
-    if (isNaN(lon) || lon < -180 || lon > 180) {
-      Alert.alert(t('error'), 'Invalid longitude');
-      return false;
+      const error = translate('invalidLatitude');
+      setLatitudeError(error);
+      Alert.alert(translate('error'), error);
+      isValid = false;
     }
 
-    return true;
+    // Validate longitude
+    if (isNaN(lon) || lon < -180 || lon > 180) {
+      const error = translate('invalidLongitude');
+      setLongitudeError(error);
+      Alert.alert(translate('error'), error);
+      isValid = false;
+    }
+
+    // Validate peak power
+    if (isNaN(peak) || peak <= 0) {
+      const error = translate('peakPowerPositive');
+      setPeakPowerError(error);
+      Alert.alert(translate('error'), error);
+      isValid = false;
+    }
+
+    // Validate system loss
+    if (isNaN(loss) || loss < 0 || loss > 100) {
+      const error = translate('systemLossRange');
+      setSystemLossError(error);
+      Alert.alert(translate('error'), error);
+      isValid = false;
+    }
+
+    return isValid;
   };
 
   const handleCalculate = async () => {
@@ -166,30 +281,18 @@ export default function CalculateScreen() {
       color: colors.text,
       marginBottom: Spacing.md,
     },
-    locationButtons: {
-      flexDirection: 'row',
-      gap: Spacing.md,
-      marginBottom: Spacing.md,
-    },
-    locationButton: {
-      flex: 1,
+    coordinatesContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      padding: Spacing.md,
-      borderRadius: BorderRadius.md,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      backgroundColor: 'transparent',
       gap: Spacing.sm,
     },
-    locationButtonText: {
-      color: colors.primary,
-      fontWeight: '600',
+    coordinateInput: {
+      flex: 1,
     },
     inputRow: {
       flexDirection: 'row',
       gap: Spacing.md,
+      flexWrap: 'wrap',
     },
     inputHalf: {
       flex: 1,
@@ -236,6 +339,33 @@ export default function CalculateScreen() {
       color: colors.textSecondary,
       marginTop: Spacing.xs,
     },
+    locationButtons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    locateButton: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
+      minWidth: 44,
+      minHeight: 44,
+      marginLeft: Spacing.sm,
+      marginTop: 0,
+    },
+    mapButton: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.sm,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      minWidth: 44,
+      minHeight: 44,
+      marginLeft: Spacing.sm,
+    },
   });
 
   return (
@@ -248,70 +378,73 @@ export default function CalculateScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('coordinates')}</Text>
           
-          <View style={styles.locationButtons}>
-            <TouchableOpacity 
-              style={styles.locationButton}
-              onPress={getCurrentLocation}
-              disabled={Platform.OS === 'web'}
-            >
-              <Navigation size={20} color={colors.primary} />
-              <Text style={[styles.locationButtonText, Platform.OS === 'web' && { opacity: 0.5 }]}>
-                GPS {Platform.OS === 'web' ? '(Mobile only)' : ''}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.locationButton}>
-              <MapPin size={20} color={colors.primary} />
-              <Text style={styles.locationButtonText}>
-                Mapa {Platform.OS === 'web' ? '(Coming soon)' : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.inputRow}>
-            <Input
-              label={t('latitude')}
-              value={latitude}
-              onChangeText={setLatitude}
-              keyboardType="numeric"
-              style={styles.inputHalf}
-            />
-            <Input
-              label={t('longitude')}
-              value={longitude}
-              onChangeText={setLongitude}
-              keyboardType="numeric"
-              style={styles.inputHalf}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configuração do Painel</Text>
-          
-          <TouchableOpacity
-            style={styles.toggleButton}
-            onPress={() => setUseManualInput(!useManualInput)}
-          >
-            <Text style={styles.toggleText}>
-              {useManualInput ? t('manualInput') : t('selectPanelModel')}
-            </Text>
-            <ChevronDown size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          {!useManualInput && (
-            <Card>
-              <TouchableOpacity
-                style={styles.toggleButton}
-                onPress={() => setShowModelPicker(true)}
+          <View style={styles.coordinatesContainer}>
+            <View style={styles.coordinateInput}>
+              <Input
+                label="Latitude"
+                value={latitude}
+                onChangeText={(text) => {
+                  setLatitude(text);
+                  setLatitudeError(undefined);
+                }}
+                keyboardType="numeric"
+                error={latitudeError}
+                placeholder="Ex: -23.5505"
+              />
+            </View>
+            <View style={styles.coordinateInput}>
+              <Input
+                label="Longitude"
+                value={longitude}
+                onChangeText={(text) => {
+                  setLongitude(text);
+                  setLongitudeError(undefined);
+                }}
+                keyboardType="numeric"
+                error={longitudeError}
+                placeholder="Ex: -46.6333"
+              />
+            </View>
+            <View style={styles.locationButtons}>
+              <TouchableOpacity 
+                style={[
+                  styles.locateButton, 
+                  isLocating && { backgroundColor: colors.primary + '40' }
+                ]}
+                onPress={getCurrentLocation}
+                disabled={isLocating}
               >
-                <Text style={styles.toggleText}>
-                  {selectedModel ? selectedModel.name : 'Selecionar Modelo'}
-                </Text>
-                <ChevronDown size={20} color={colors.textSecondary} />
+                {isLocating ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <LocateFixed size={20} color={colors.primary} />
+                )}
               </TouchableOpacity>
-            </Card>
-          )}
+              <TouchableOpacity 
+                style={[
+                  styles.mapButton,
+                  { borderColor: colors.primary, backgroundColor: colors.primary + '10' }
+                ]}
+                onPress={() => setShowMapModal(true)}
+              >
+                <Map size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('panelConfiguration')}</Text>
+            
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={() => setShowModelPicker(true)}
+            >
+              <Text style={styles.toggleText}>
+                {selectedModel ? selectedModel.name : t('selectModel')}
+              </Text>
+              <ChevronDown size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </Card>
 
           <View style={styles.inputRow}>
             <Input
@@ -319,14 +452,15 @@ export default function CalculateScreen() {
               value={peakPower}
               onChangeText={setPeakPower}
               keyboardType="numeric"
+              error={peakPowerError}
               style={styles.inputHalf}
-              disabled={!useManualInput && selectedModel !== null}
             />
             <Input
               label={t('systemLoss')}
               value={systemLoss}
               onChangeText={setSystemLoss}
               keyboardType="numeric"
+              error={systemLossError}
               style={styles.inputHalf}
             />
           </View>
@@ -347,7 +481,7 @@ export default function CalculateScreen() {
       >
         <View style={styles.modelPickerModal}>
           <View style={styles.modelPickerContent}>
-            <Text style={styles.sectionTitle}>Selecionar Modelo</Text>
+            <Text style={styles.sectionTitle}>{t('selectModel')}</Text>
             <ScrollView>
               {panelModels.map((model) => (
                 <TouchableOpacity
@@ -370,6 +504,20 @@ export default function CalculateScreen() {
           </View>
         </View>
       </Modal>
+
+      <MapModal
+        visible={showMapModal}
+        initialLocation={
+          latitude && longitude 
+            ? { 
+                latitude: parseFloat(latitude) || -23.5505, 
+                longitude: parseFloat(longitude) || -46.6333 
+              } 
+            : undefined
+        }
+        onClose={() => setShowMapModal(false)}
+        onLocationSelect={handleMapSelect}
+      />
     </SafeAreaView>
   );
 }
