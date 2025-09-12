@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Compass } from 'lucide-react-native';
@@ -150,7 +150,13 @@ export default function ResultsScreen() {
     compassButton: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      minWidth: 100,
     },
   });
 
@@ -168,35 +174,35 @@ export default function ResultsScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Resumo da Produção</Text>
+          <Text style={styles.sectionTitle}>{t('productionSummary')}</Text>
           
           <View style={styles.statsGrid}>
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
                 {result.outputs.totals.fixed.E_y.toFixed(0)}
               </Text>
-              <Text style={styles.statLabel}>kWh/ano</Text>
+              <Text style={styles.statLabel}>{t('annualProductionUnit')}</Text>
             </Card>
             
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
                 {(result.outputs.totals.fixed.E_y / 12).toFixed(0)}
               </Text>
-              <Text style={styles.statLabel}>kWh/mês (média)</Text>
+              <Text style={styles.statLabel}>{t('monthlyAverage')}</Text>
             </Card>
             
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
                 {result.mounting_system.fixed.slope.value.toFixed(0)}°
               </Text>
-              <Text style={styles.statLabel}>Inclinação Ótima</Text>
+              <Text style={styles.statLabel}>{t('optimalInclination')}</Text>
             </Card>
             
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
                 {result.mounting_system.fixed.azimuth.value.toFixed(0)}°
               </Text>
-              <Text style={styles.statLabel}>Azimute Ótimo</Text>
+              <Text style={styles.statLabel}>{t('optimalAzimuth')}</Text>
             </Card>
           </View>
         </View>
@@ -218,26 +224,51 @@ export default function ResultsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Direção Ótima</Text>
+          <Text style={styles.sectionTitle}>{t('optimalDirection')}</Text>
           <Card>
             <View style={styles.compassSection}>
               <View style={styles.compassInfo}>
                 <Text style={styles.compassValue}>
-                  {result.mounting_system.fixed.azimuth.value.toFixed(0)}° Sul
+                  {result.mounting_system.fixed.azimuth.optimal 
+                    ? t('optimalAzimuth')
+                    : (() => {
+                        const value = result.mounting_system.fixed.azimuth.value;
+                        let direction = '';
+                        
+                        if (value >= 337.5 || value < 22.5) {
+                          direction = t('south');
+                        } else if (value >= 22.5 && value < 67.5) {
+                          direction = t('southWest');
+                        } else if (value >= 67.5 && value < 112.5) {
+                          direction = t('west');
+                        } else if (value >= 112.5 && value < 157.5) {
+                          direction = t('northWest');
+                        } else if (value >= 157.5 && value < 202.5) {
+                          direction = t('north');
+                        } else if (value >= 202.5 && value < 247.5) {
+                          direction = t('northEast');
+                        } else if (value >= 247.5 && value < 292.5) {
+                          direction = t('east');
+                        } else {
+                          direction = t('southEast');
+                        }
+                        
+                        return `${value.toFixed(0)}° ${direction}`;
+                      })()}
                 </Text>
                 <Text style={styles.compassLabel}>
-                  Direção recomendada para os painéis
+                  {t('panelDirection')}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.compassButton}
-                onPress={openCompass}
-              >
-                <Compass size={24} color={colors.primary} />
-                <Text style={{ color: colors.primary }}>
-                  {t('openCompass')}
-                </Text>
-              </TouchableOpacity>
+              {Platform.OS !== 'web' && (
+                <TouchableOpacity
+                  style={styles.compassButton}
+                  onPress={openCompass}
+                >
+                  <Compass size={20} color={colors.surface} />
+                  <Text style={{ color: colors.surface, fontWeight: '600' }}>{t('openCompass')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </Card>
         </View>

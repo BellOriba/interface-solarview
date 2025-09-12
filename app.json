@@ -9,9 +9,24 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate solar panel calculations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to provide accurate solar panel calculations.",
+        "NSLocationAlwaysUsageDescription": "This app uses your location to provide accurate solar panel calculations.",
+        "NSLocationUsageDescription": "This app uses your location to provide accurate solar panel calculations.",
+        "UIBackgroundModes": ["location"]
+      },
+      "bundleIdentifier": "com.APSProj.solarview"
     },
-    "android": {},
+    "android": {
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE_LOCATION"
+      ],
+      "package": "com.APSProj.solarview"
+    },
     "web": {
       "bundler": "metro",
       "output": "single",
@@ -20,7 +35,22 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationAlwaysPermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Allow $(PRODUCT_NAME) to access your device's sensors."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

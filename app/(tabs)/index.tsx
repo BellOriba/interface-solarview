@@ -75,7 +75,7 @@ export default function CalculateScreen() {
       if (Platform.OS === 'web') {
         // Web geolocation API
         if (!navigator.geolocation) {
-          setLocationError('Geolocalização não suportada no seu navegador');
+          setLocationError(t('geolocationNotSupported'));
           return;
         }
 
@@ -83,16 +83,16 @@ export default function CalculateScreen() {
           navigator.geolocation.getCurrentPosition(
             resolve, 
             (error) => {
-              let message = 'Erro ao obter localização';
+              let message = t('locationError');
               switch(error.code) {
                 case error.PERMISSION_DENIED:
-                  message = 'Permissão de localização negada';
+                  message = t('locationDenied');
                   break;
                 case error.POSITION_UNAVAILABLE:
-                  message = 'Informações de localização indisponíveis';
+                  message = t('locationUnavailable');
                   break;
                 case error.TIMEOUT:
-                  message = 'Tempo de espera da localização expirado';
+                  message = t('locationTimeout');
                   break;
               }
               reject(new Error(message));
@@ -111,7 +111,7 @@ export default function CalculateScreen() {
         // Mobile (Expo Location)
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          setLocationError('Permissão para acessar a localização foi negada');
+          setLocationError(t('locationDenied'));
           return;
         }
 
@@ -131,13 +131,13 @@ export default function CalculateScreen() {
       setLocationError(null);
     } catch (error) {
       console.error('Error getting location:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      setLocationError(`Não foi possível obter a localização: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : t('unknownError');
+      setLocationError(t('locationError') + ': ' + errorMessage);
       
       // Show alert for better user feedback
       Alert.alert(
-        'Erro de Localização', 
-        `Não foi possível obter sua localização: ${errorMessage}. Por favor, insira as coordenadas manualmente.`
+        t('error'), 
+        t('locationError') + ': ' + errorMessage + '. ' + t('pleaseEnterCoordinatesManually')
       );
     } finally {
       setIsLocating(false);
@@ -172,7 +172,7 @@ export default function CalculateScreen() {
 
     // Check for empty fields
     if (!latitude || !longitude || !peakPower || !systemLoss) {
-      Alert.alert(translate('error'), translate('fillAllFields'));
+      Alert.alert(t('error'), t('fillAllFields'));
       return false;
     }
 
@@ -186,33 +186,33 @@ export default function CalculateScreen() {
 
     // Validate latitude
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      const error = translate('invalidLatitude');
+      const error = t('invalidLatitude');
       setLatitudeError(error);
-      Alert.alert(translate('error'), error);
+      Alert.alert(t('error'), error);
       isValid = false;
     }
 
     // Validate longitude
     if (isNaN(lon) || lon < -180 || lon > 180) {
-      const error = translate('invalidLongitude');
+      const error = t('invalidLongitude');
       setLongitudeError(error);
-      Alert.alert(translate('error'), error);
+      Alert.alert(t('error'), error);
       isValid = false;
     }
 
     // Validate peak power
     if (isNaN(peak) || peak <= 0) {
-      const error = translate('peakPowerPositive');
+      const error = t('peakPowerPositive');
       setPeakPowerError(error);
-      Alert.alert(translate('error'), error);
+      Alert.alert(t('error'), error);
       isValid = false;
     }
 
     // Validate system loss
     if (isNaN(loss) || loss < 0 || loss > 100) {
-      const error = translate('systemLossRange');
+      const error = t('systemLossRange');
       setSystemLossError(error);
-      Alert.alert(translate('error'), error);
+      Alert.alert(t('error'), error);
       isValid = false;
     }
 
@@ -240,7 +240,7 @@ export default function CalculateScreen() {
         },
       });
     } catch (error) {
-      Alert.alert(t('error'), 'Error calculating solar production');
+      Alert.alert(t('error'), t('errorCalculatingSolarProduction'));
     } finally {
       setIsLoading(false);
     }
@@ -363,7 +363,7 @@ export default function CalculateScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>SolarView</Text>
+        <Text style={styles.title}>{t('solarView')}</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -373,7 +373,7 @@ export default function CalculateScreen() {
           <View style={styles.coordinatesContainer}>
             <View style={styles.coordinateInput}>
               <Input
-                label="Latitude"
+                label={t('latitude')}
                 value={latitude}
                 onChangeText={(text) => {
                   setLatitude(text);
@@ -381,12 +381,12 @@ export default function CalculateScreen() {
                 }}
                 keyboardType="numeric"
                 error={latitudeError}
-                placeholder="Ex: -23.5505"
+                placeholder={t('latitudePlaceholder')}
               />
             </View>
             <View style={styles.coordinateInput}>
               <Input
-                label="Longitude"
+                label={t('longitude')}
                 value={longitude}
                 onChangeText={(text) => {
                   setLongitude(text);
@@ -394,7 +394,7 @@ export default function CalculateScreen() {
                 }}
                 keyboardType="numeric"
                 error={longitudeError}
-                placeholder="Ex: -46.6333"
+                placeholder={t('longitudePlaceholder')}
               />
             </View>
             <View style={styles.locationButtons}>
