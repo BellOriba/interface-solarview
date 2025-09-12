@@ -2,13 +2,10 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Add web-specific resolver configuration
-config.resolver.alias = {
-  ...config.resolver.alias,
-  'react-dom': 'react-native-web/dist/exports/ReactDOM',
-};
+// Esta linha garante que o Metro olhe para dentro de `node_modules` para transpilar o código.
+config.watchFolders = [__dirname, ...config.watchFolders];
 
-// Ensure web platform is supported
-config.resolver.platforms = ['ios', 'android', 'native', 'web'];
+config.resolver.unstable_enableSymlinks = true;
+config.resolver.unstable_enablePackageExports = true;
 
 module.exports = config;

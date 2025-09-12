@@ -13,8 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { MapPin, Navigation, ChevronDown, LocateFixed, Map } from 'lucide-react-native';
-import { MapModal } from '@/components/MapModal';
+import { ChevronDown, LocateFixed } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -47,7 +46,6 @@ export default function CalculateScreen() {
   
   // Location state
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [showMapModal, setShowMapModal] = useState(false);
   
   // Panel models state
   const [panelModels, setPanelModels] = useState<PanelModel[]>([]);
@@ -164,12 +162,6 @@ export default function CalculateScreen() {
     setShowModelPicker(false);
   };
 
-  const handleMapSelect = (coords: { latitude: number; longitude: number }) => {
-    setLatitude(coords.latitude.toFixed(6));
-    setLongitude(coords.longitude.toFixed(6));
-    setLatitudeError(undefined);
-    setLongitudeError(undefined);
-  };
 
   const validateForm = () => {
     // Reset all errors
@@ -420,15 +412,6 @@ export default function CalculateScreen() {
                   <LocateFixed size={20} color={colors.primary} />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[
-                  styles.mapButton,
-                  { borderColor: colors.primary, backgroundColor: colors.primary + '10' }
-                ]}
-                onPress={() => setShowMapModal(true)}
-              >
-                <Map size={20} color={colors.primary} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -504,20 +487,6 @@ export default function CalculateScreen() {
           </View>
         </View>
       </Modal>
-
-      <MapModal
-        visible={showMapModal}
-        initialLocation={
-          latitude && longitude 
-            ? { 
-                latitude: parseFloat(latitude) || -23.5505, 
-                longitude: parseFloat(longitude) || -46.6333 
-              } 
-            : undefined
-        }
-        onClose={() => setShowMapModal(false)}
-        onLocationSelect={handleMapSelect}
-      />
     </SafeAreaView>
   );
 }
