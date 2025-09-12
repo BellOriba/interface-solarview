@@ -30,12 +30,59 @@ export default function CompassScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const rotationAnim = useRef(new Animated.Value(0)).current;
   const subscription = useRef<ReturnType<typeof Magnetometer.addListener> | null>(null);
+  const lastHeading = useRef<number>(0);
+  const headingBuffer = useRef<number[]>([]);
 
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const optimalDirection = optimalAzimuth ? parseFloat(optimalAzimuth) : 180;
+
+  // Função para normalizar ângulos entre 0 e 359
+  const normalizeAngle = (angle: number): number => {
+    let normalized = angle % 360;
+    if (normalized < 0) normalized += 360;
+    return Math.round(normalized);
+  };
+
+  // Função para calcular a média móvel dos valores de heading
+  const smoothHeading = (newHeading: number): number => {
+    const bufferSize = 5;
+    headingBuffer.current.push(newHeading);
+    
+    if (headingBuffer.current.length > bufferSize) {
+      headingBuffer.current.shift();
+    }
+    
+    // Lidar com transição 359°-0°
+    let sum = 0;
+    let count = headingBuffer.current.length;
+    
+    if (count === 1) return newHeading;
+    
+    // Verificar se há transição entre 359 e 0
+    let hasTransition = false;
+    for (let i = 0; i < count - 1; i++) {
+      if (Math.abs(headingBuffer.current[i] - headingBuffer.current[i + 1]) > 180) {
+        hasTransition = true;
+        break;
+      }
+    }
+    
+    if (hasTransition) {
+      // Converter valores próximos de 0 para valores > 360 temporariamente
+      const adjustedValues = headingBuffer.current.map(val => 
+        val < 180 ? val + 360 : val
+      );
+      sum = adjustedValues.reduce((a, b) => a + b, 0);
+      let avg = sum / count;
+      return normalizeAngle(avg);
+    } else {
+      sum = headingBuffer.current.reduce((a, b) => a + b, 0);
+      return normalizeAngle(sum / count);
+    }
+  };
 
   const startCompass = useCallback(() => {
     try {
@@ -48,22 +95,32 @@ export default function CompassScreen() {
         return;
       }
 
-      // Set the update interval
-      Magnetometer.setUpdateInterval(100);
+      // Set the update interval (menos frequente para reduzir oscilação)
+      Magnetometer.setUpdateInterval(200);
 
       // Start listening to the magnetometer
       subscription.current = Magnetometer.addListener((data: MagnetometerMeasurement) => {
-        const { x, y } = data;
+        const { x, y, z } = data;
         if (x !== null && y !== null) {
-          // Calculate the angle in radians and convert to degrees
-          let angle = Math.atan2(y, x) * (180 / Math.PI);
-          // Convert to 0-360 range
-          angle = (angle + 360) % 360;
-          setCurrentHeading(angle);
+          // Calcular o ângulo em radianos e converter para graus
+          // Usar atan2(x, y) em vez de atan2(y, x) para alinhamento correto com o Norte
+          let angle = Math.atan2(x, y) * (180 / Math.PI);
           
-          // Vibrate when aligned
-          if (isAligned(angle)) {
-            Vibration.vibrate(50);
+          // Normalizar para 0-359
+          angle = normalizeAngle(angle);
+          
+          // Aplicar suavização
+          const smoothedAngle = smoothHeading(angle);
+          
+          // Só atualizar se a diferença for significativa (reduz tremulação)
+          if (Math.abs(smoothedAngle - lastHeading.current) > 2) {
+            setCurrentHeading(smoothedAngle);
+            lastHeading.current = smoothedAngle;
+            
+            // Vibrar quando alinhado
+            if (isAligned(smoothedAngle)) {
+              Vibration.vibrate(50);
+            }
           }
         }
       });
@@ -138,11 +195,14 @@ export default function CompassScreen() {
   }, [startCompass, stopCompass]);
 
   useEffect(() => {
+    // Animação mais suave para evitar giros bruscos na transição 0-359
+    const targetRotation = -currentHeading;
+    
     Animated.spring(rotationAnim, {
-      toValue: -currentHeading,
+      toValue: targetRotation,
       useNativeDriver: true,
-      friction: 5,
-      tension: 10,
+      friction: 8, // Mais fricção para suavizar
+      tension: 15, // Menos tensão
     }).start();
   }, [currentHeading, rotationAnim]);
 
@@ -167,9 +227,9 @@ export default function CompassScreen() {
 
   const getDifferenceAngle = (heading: number = currentHeading): number => {
     let diff = optimalDirection - heading;
-    // Normalize to -180 to 180 range
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
+    // Normalizar para range -180 a 180
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
     return Math.abs(diff);
   };
 
@@ -262,19 +322,22 @@ export default function CompassScreen() {
               { 
                 transform: [
                   { rotate: rotationAnim.interpolate({
-                    inputRange: [0, 360],
-                    outputRange: ['0deg', '360deg']
+                    inputRange: [0, 359],
+                    outputRange: ['0deg', '359deg']
                   }) }
                 ] 
               },
             ]}
           >
-            {/* North indicator */}
-            <View style={styles.northIndicator}>
-              <Text style={[styles.northText, { color: colors.primary }]}>N</Text>
+            {/* Marcadores de direção */}
+            <View style={styles.directionMarkers}>
+              <Text style={[styles.directionText, { color: colors.textSecondary, top: 15 }]}>N</Text>
+              <Text style={[styles.directionText, { color: colors.textSecondary, right: 15, top: '45%' }]}>L</Text>
+              <Text style={[styles.directionText, { color: colors.textSecondary, bottom: 15 }]}>S</Text>
+              <Text style={[styles.directionText, { color: colors.textSecondary, left: 15, top: '45%' }]}>O</Text>
             </View>
             
-            {/* Optimal direction indicator */}
+            {/* Optimal direction indicator - seta fixa que aponta para direção ótima */}
             <View
               style={[
                 styles.optimalArrow,
@@ -285,34 +348,34 @@ export default function CompassScreen() {
               ]}
             />
             
-            {/* Current direction indicator */}
-            <View style={styles.currentArrow}>
-              <Navigation size={60} color={getAlignmentColor()} />
+            {/* Current device direction indicator - sempre aponta para cima */}
+            <View style={styles.deviceArrow}>
+              <View style={[styles.deviceArrowShape, { backgroundColor: getAlignmentColor() }]} />
             </View>
           </Animated.View>
         </View>
         
         <View style={styles.infoSection}>
           <Text style={[styles.currentHeading, { color: colors.text }]}>
-            {Math.round(currentHeading)}°
+            {currentHeading}°
           </Text>
           
           <Text style={[styles.optimalHeading, { color: colors.primary }]}>
-            {t?.('solarCompass')}: {Math.round(optimalDirection)}°
+            Ideal: {Math.round(optimalDirection)}°
           </Text>
           
           <Text style={[styles.alignmentStatus, { color: getAlignmentColor() }]}>
-            {isAligned() ? t?.('aligned') : (t?.('keepTurning') || 'Keep turning')}
+            {isAligned() ? (t?.('aligned') ?? 'Alinhado') : (t?.('keepTurning') ?? 'Continue girando')}
           </Text>
           
           <Text style={[styles.difference, { color: colors.textSecondary }]}>
-            {t?.('difference')}: {Math.round(getDifferenceAngle())}°
+            Diferença: {Math.round(getDifferenceAngle())}°
           </Text>
         </View>
         
         <View style={styles.tipContainer}>
           <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-            {t?.('compassTip') ?? 'Gire o dispositivo até que a seta fique alinhada com a direção ideal.'}
+            {t?.('compassTip') ?? 'A seta azul mostra a direção ideal. Gire até que sua posição (seta colorida) se alinhe com ela.'}
           </Text>
         </View>
       </View>
@@ -406,13 +469,6 @@ const styles = StyleSheet.create({
     width: 4,
     height: 80,
     borderRadius: 2,
-  },
-  currentArrow: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: '100%',
   },
   infoSection: {
     alignItems: 'center',
